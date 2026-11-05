@@ -283,15 +283,26 @@ $(document).ready(function() {
                     limit: 10
                 },
                 success: function(response) {
+                    console.log('API Response:', response); // Debug log
                     if (response.meta.status === 'success' && response.data.length > 0) {
                         let html = '';
                         response.data.forEach(function(item) {
+                            console.log('Item:', item); // Debug each item
+                            
+                            // Build display text from available fields
+                            const subdistrict = item.subdistrict || item.district || '';
+                            const city = item.city || item.city_name || '';
+                            const province = item.province || item.province_name || '';
+                            const zipCode = item.zip_code || item.postal_code || '-';
+                            
+                            const displayText = [subdistrict, city, province].filter(Boolean).join(', ');
+                            
                             html += `
                                 <a href="#" class="list-group-item list-group-item-action destination-item" 
                                    data-id="${item.id}" 
-                                   data-label="${item.label}">
-                                    <strong>${item.subdistrict}</strong>, ${item.city}, ${item.province}
-                                    <br><small class="text-muted">Kode Pos: ${item.zip_code || '-'}</small>
+                                   data-label="${displayText}">
+                                    <strong>${displayText}</strong>
+                                    <br><small class="text-muted">Kode Pos: ${zipCode}</small>
                                 </a>
                             `;
                         });
