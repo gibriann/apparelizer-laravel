@@ -363,8 +363,8 @@ $(document).ready(function() {
 
         $('#service_name').prop('disabled', true).html('<option value="">Loading...</option>');
 
-        // Origin ID (hardcoded - should be from admin settings)
-        const originId = 31555; // Example: Jakarta Pusat
+        // Origin: Jati, Pulo Gadung, Jakarta Timur
+        const originId = 17732;
 
         $.ajax({
             url: '/shipping/calculate-cost',
