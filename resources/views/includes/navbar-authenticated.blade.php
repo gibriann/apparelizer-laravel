@@ -56,7 +56,7 @@
 
                         <img src="{{ asset('images/icon-cart-empty.svg') }}" alt="" />
                         <?php 
-                        use App\Cart;
+                        use App\Models\Cart;
                         $carts = Cart::where('user_id', auth()->user()->id)->get();
                         $amount = [];
                         foreach ($carts as $cart) {
