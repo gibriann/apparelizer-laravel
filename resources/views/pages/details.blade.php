@@ -80,8 +80,8 @@
 
                         <div class="form-group row">
                             <div class="col-12 col-lg-10" data-aos="zoom-in" data-aos-delay="300">
-                                <select class="custom-select @error('printing_id') is-invalid @enderror" name="printing_id">
-                                    <option value="">Jenis Sablon</option>
+                                <select class="custom-select @error('printing_id') is-invalid @enderror" name="printing_id" required>
+                                    <option value="">Jenis Sablon *</option>
                                     @foreach ($printings as $printing)
                                         <option value="{{ $printing->id }}" @if (old('printing_id') == "$printing->id") {{ 'selected' }} @endif>{{ $printing->printing_name }}</option>
                                     @endforeach

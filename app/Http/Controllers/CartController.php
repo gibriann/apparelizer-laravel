@@ -104,7 +104,7 @@ class CartController extends Controller
                 'link_design' => $imageName != '' ? 'images/' . $imageName : null,
                 'size_id' => $request->size,
                 'color_id' => $request->color,
-                'printing_type_id' => $request->jenis_sablon,
+                'printing_type_id' => $request->printing_id,
                 'notes' => $request->notes ? $request->notes : null
             ]);
         }
@@ -159,7 +159,7 @@ class CartController extends Controller
                 'quantity' => $cart->amount,
                 'size_id' => $cart->size_id,
                 'color_id' => $cart->color_id,
-                'printing_id' => $cart->printing_type_id ?? 1, // Default to first printing type if not selected
+                'printing_id' => $cart->printing_type_id,
                 'sub_weight' => $cart->products->product_weight * $cart->amount,
                 'total_order' => $cart->products->product_price * $cart->amount,
                 'product_design' => $cart->link_design ?? '',
