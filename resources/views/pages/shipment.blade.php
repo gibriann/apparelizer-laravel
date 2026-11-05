@@ -290,12 +290,14 @@ $(document).ready(function() {
                             console.log('Item:', item); // Debug each item
                             
                             // Build display text from available fields
-                            const subdistrict = item.subdistrict || item.district || '';
                             const city = item.city || item.city_name || '';
+                            const district = item.district || '';
                             const province = item.province || item.province_name || '';
                             const zipCode = item.zip_code || item.postal_code || '-';
                             
-                            const displayText = [subdistrict, city, province].filter(Boolean).join(', ');
+                            // Build label: "District, City, Province" or "City, Province" if no district
+                            const parts = [district, city, province].filter(Boolean);
+                            const displayText = parts.join(', ');
                             
                             html += `
                                 <a href="#" class="list-group-item list-group-item-action destination-item" 
