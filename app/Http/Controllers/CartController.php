@@ -125,21 +125,31 @@ class CartController extends Controller
     {
         $code = 'TRX-' . mt_rand(00000, 99999);
         $carts = Cart::where('user_id', Auth::user()->id)->get();
+        
+        // Calculate total weight
+        $total_weight = 0;
+        foreach ($carts as $cart) {
+            $total_weight += $cart->products->product_weight * $cart->amount;
+        }
 
         $purchase = Purchase::create([
-            'transaction_code' => $code,
-            'transaction_total_price' => $request->totalnya,
-            'transaction_subtotal_price' => $request->subtotal,
-            'transaction_total_shipping_price' => $request->ongkir,
+            'code' => $code,
+            'total_payment' => $request->totalnya,
+            'total_weight' => $total_weight,
+            'shipment_fee' => $request->ongkir,
             'shipping_status_id' => 1,
             'payment_status_id' => 1,
             'user_id' => Auth::user()->id,
-            'recipient_name' => $request->user_name,
+            'recipient' => $request->user_name,
             'recipient_address' => $request->address,
-            'recipient_city' => $request->kota,
-            'recipient_phone_number' => $request->phone_number,
-            'shipping_courier' => $request->kurir,
-            'shipping_service' => $request->kurir_name,
+            'recipient_number' => $request->phone_number,
+            'province' => $request->kota ?? 'N/A',
+            'district' => $request->kota ?? 'N/A',
+            'postal_code' => $request->postal_code ?? '00000',
+            'courier' => $request->kurir,
+            'service' => $request->kurir_name,
+            'etd' => $request->etd ?? '-',
+            'notes' => $request->notes,
         ]);
 
         foreach ($carts as $cart) {

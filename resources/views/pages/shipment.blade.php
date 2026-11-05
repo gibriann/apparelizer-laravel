@@ -398,6 +398,15 @@ $(document).ready(function() {
     // Update total when service is selected
     $('#service_name').on('change', function() {
         const shippingCost = parseInt($(this).val()) || 0;
+        const etd = $(this).find(':selected').data('etd') || '-';
+        
+        // Store ETD in hidden field
+        $('<input>').attr({
+            type: 'hidden',
+            name: 'etd',
+            value: etd
+        }).appendTo('#checkoutForm');
+        
         updateShippingCost(shippingCost);
     });
 
