@@ -341,7 +341,7 @@ class CartController extends Controller
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => "GET",
             CURLOPT_HTTPHEADER => array(
-                "                "key: " . config('rajaongkir.api_key')"
+                "key: " . config('rajaongkir.api_key')
             ),
         ));
         
@@ -378,7 +378,7 @@ class CartController extends Controller
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => "GET",
             CURLOPT_HTTPHEADER => array(
-                "                "key: " . config('rajaongkir.api_key')"
+                "key: " . config('rajaongkir.api_key')
             ),
         ));
         
@@ -417,7 +417,7 @@ class CartController extends Controller
             CURLOPT_POSTFIELDS => "origin=37&destination=".$distrik_terpilih."&weight=".$total_berat."&courier=".$ekspedisi_terpilih,
             CURLOPT_HTTPHEADER => array(
                 "content-type: application/x-www-form-urlencoded",
-                "                "key: " . config('rajaongkir.api_key')"
+                "key: " . config('rajaongkir.api_key')
             ),
         ));
 
