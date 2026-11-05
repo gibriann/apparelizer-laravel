@@ -42,9 +42,10 @@ Route::get('/details/{id}/{slug}', [DetailsController::class, 'index'])->name('d
 Route::get('/register/success', [App\Http\Controllers\Auth\RegisterController::class, 'success'])->name('register-success');
 Route::post('/checkout/callback', [CartController::class, 'callback'])->name('midtrans-callback');
 
+Route::post('/cart/{id}/{slug}', [CartController::class, 'store']);
+
 Route::middleware(['auth','checkrole: 3'])->group(function () {
     Route::post('/cart/delete/{id}', [CartController::class, 'delete']);
-    Route::post('/cart/{id}/{slug}', [CartController::class, 'store']);
     
     // New RajaOngkir API V2 endpoints
     Route::get('/shipping/search-destination', [CartController::class, 'searchDestination']);

@@ -65,8 +65,23 @@ class AuthController extends Controller
             'phone_number' => $request->phone_number,
         ]);
 
-        Alert::success('Berhasil','Silahkan melakukan login');
-        return redirect('/login');
+        // Auto login after registration
+        Auth::login($user);
+        
+        // Restore cart data from session if exists
+        if (session()->has('pending_cart')) {
+            $cartData = session('pending_cart');
+            session()->forget('pending_cart');
+            session(['cart_data' => $cartData]);
+        }
+
+        Alert::success('Berhasil','Akun berhasil dibuat');
+        
+        // Redirect to intended page or home
+        if (session()->has('cart_data')) {
+            return redirect()->intended('/cart');
+        }
+        return redirect()->intended('/');
     }
 
     protected function postlogin(Request $request)
@@ -79,11 +94,22 @@ class AuthController extends Controller
 
         if(Auth::attempt($request->only('email','password'))){
             if (Auth::user()->user_status_id == 1) {
+                // Restore cart data from session if exists
+                if (session()->has('pending_cart')) {
+                    $cartData = session('pending_cart');
+                    session()->forget('pending_cart');
+                    session(['cart_data' => $cartData]);
+                }
+                
                 if(Auth::user()->role_id == 1||Auth::user()->role_id == 2){
                     Alert::toast('Anda berhasil masuk ke dalam sistem','success');
                     return redirect(route('dashboard'));
                 }elseif (Auth::user()->role_id == 3) {
-                    return redirect ('/');
+                    // Check if user was trying to add to cart before login
+                    if (session()->has('cart_data')) {
+                        return redirect()->intended('/cart');
+                    }
+                    return redirect()->intended('/');
                 }
             }else{
                 Alert::error('Login Gagal','Akses Ditolak');

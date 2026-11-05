@@ -72,6 +72,24 @@ class CartController extends Controller
 
     public function store(Request $request, $id, $slug)
     {
+        // Check if user authenticated
+        if (!auth()->check()) {
+            // Store cart data in session
+            session(['pending_cart' => [
+                'product_id' => $id,
+                'slug' => $slug,
+                'amount' => $request->amount ?? 1,
+                'link_design' => $request->link_design ?? null,
+                'size_id' => $request->size_id,
+                'color_id' => $request->color_id,
+                'printing_id' => $request->printing_id,
+                'notes' => $request->notes ?? null
+            ]]);
+            
+            Alert::info('Info', 'Silahkan login atau daftar untuk melanjutkan');
+            return redirect()->route('login')->with('url.intended', url()->previous());
+        }
+        
         $product = Product::where('id', $id)->first();
         $carts = Cart::where('user_id', auth()->user()->id)->where('product_id', $id)->first();
 
@@ -94,7 +112,7 @@ class CartController extends Controller
                 'link_design' => $request->link_design ?? null,
                 'size_id' => $request->size_id,
                 'color_id' => $request->color_id,
-                'printing_type_id' => $request->printing_id,
+                'printing_id' => $request->printing_id,
                 'notes' => $request->notes ? $request->notes : null
             ]);
         }
@@ -149,7 +167,7 @@ class CartController extends Controller
                 'quantity' => $cart->amount,
                 'size_id' => $cart->size_id,
                 'color_id' => $cart->color_id,
-                'printing_id' => $cart->printing_type_id,
+                'printing_id' => $cart->printing_id,
                 'sub_weight' => $cart->products->product_weight * $cart->amount,
                 'total_order' => $cart->products->product_price * $cart->amount,
                 'product_design' => $cart->link_design ?? '',
@@ -175,7 +193,9 @@ class CartController extends Controller
                 'email' => auth()->user()->email,
                 'phone' => $request->phone_number,
             ],
-            'vtweb' => []
+            'callbacks' => [
+                'finish' => url('/success'),
+            ]
         ];
 
         try {
@@ -192,9 +212,7 @@ class CartController extends Controller
 
     public function success()
     {
-
         $purchases = Purchase::where('user_id', auth()->user()->id)->orderBy('created_at', 'desc')->first();
-
 
         return view('pages.success', compact('purchases'));
     }
@@ -205,17 +223,53 @@ class CartController extends Controller
         Config::$serverKey = config('midtrans.server_key');
         Config::$isProduction = config('midtrans.is_production');
 
-        // Instance midtrans notification
-        $notification = new Notification();
+        try {
+            // Instance midtrans notification with automatic signature verification
+            $notification = new Notification();
 
-        // Assign ke variable untuk memudahkan 
-        $status = $notification->transaction_status;
-        $type = $notification->payment_type;
-        $fraud = $notification->fraud_status;
-        $order_id = $notification->order_id;
+            // Log notification for debugging
+            \Log::info('Midtrans Callback Received', [
+                'status' => $notification->transaction_status,
+                'order_id' => $notification->order_id,
+                'type' => $notification->payment_type,
+                'fraud' => $notification->fraud_status ?? 'none',
+                'signature_key' => $notification->signature_key ?? 'missing'
+            ]);
 
-        // Cari transaksi berdasarkan ID
-        $transaction = Purchase::where('transaction_code', $order_id)->first();
+            // Assign ke variable untuk memudahkan 
+            $status = $notification->transaction_status;
+            $type = $notification->payment_type;
+            $fraud = $notification->fraud_status ?? null;
+            $order_id = $notification->order_id;
+
+            // Verify signature manually for extra security
+            $hashed = hash('sha512', $order_id . $notification->status_code . $notification->gross_amount . config('midtrans.server_key'));
+            if ($hashed !== $notification->signature_key) {
+                \Log::error('Invalid signature', [
+                    'order_id' => $order_id,
+                    'expected' => $hashed,
+                    'received' => $notification->signature_key
+                ]);
+                return response()->json([
+                    'meta' => [
+                        'code' => 403,
+                        'message' => 'Invalid signature'
+                    ]
+                ], 403);
+            }
+
+            // Cari transaksi berdasarkan ID
+            $transaction = Purchase::where('code', $order_id)->first();
+            
+            if (!$transaction) {
+                \Log::error('Transaction not found', ['order_id' => $order_id]);
+                return response()->json([
+                    'meta' => [
+                        'code' => 404,
+                        'message' => 'Transaction not found'
+                    ]
+                ], 404);
+            }
 
         // Handle notification status midtrans
         if ($status == 'capture') {
@@ -240,6 +294,11 @@ class CartController extends Controller
 
         // Simpan transaksi
         $transaction->save();
+        
+        \Log::info('Transaction status updated', [
+            'order_id' => $order_id,
+            'new_status' => $transaction->payment_status_id
+        ]);
 
         // Kirim email midtrans
         if ($transaction) {
@@ -265,6 +324,19 @@ class CartController extends Controller
                 'message' => 'Midtrans Notification Success'
             ]
         ]);
+        
+        } catch (Exception $e) {
+            \Log::error('Callback error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'meta' => [
+                    'code' => 500,
+                    'message' => 'Internal server error'
+                ]
+            ], 500);
+        }
     }
 
     /**

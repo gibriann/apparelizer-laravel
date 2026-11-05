@@ -15,6 +15,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'checkrole' => \App\Http\Middleware\CheckRole::class,
         ]);
+        
+        // Add global middleware for authenticated users
+        $middleware->web(append: [
+            \App\Http\Middleware\ProcessPendingCart::class,
+        ]);
+        
+        // Exclude Midtrans callback from CSRF verification
+        $middleware->validateCsrfTokens(except: [
+            '/checkout/callback',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
