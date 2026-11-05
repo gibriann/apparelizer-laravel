@@ -81,27 +81,17 @@ class CartController extends Controller
             } else {
                 $carts->amount = $carts->amount + 1;
             }
-            if (!empty($request->file('linkdesain'))) {
-                $imageName = time() . '.' . $request->linkdesain->extension();
-                $request->linkdesain->move(public_path('images'), $imageName);
-                $carts->link_design = 'images/' . $imageName;
+            if ($request->link_design) {
+                $carts->link_design = $request->link_design;
             }
             $carts->update();
 
         } else {
-
-            $imageName = '';
-            if (!empty($request->file('linkdesain'))) {
-                $imageName = time() . '.' . $request->linkdesain->extension();
-                $request->linkdesain->move(public_path('images'), $imageName);
-            }
-
-
             Cart::create([
                 'user_id' => auth()->user()->id,
                 'product_id' => $id,
                 'amount' => $request->amount != null ? $request->amount : 1,
-                'link_design' => $imageName != '' ? 'images/' . $imageName : null,
+                'link_design' => $request->link_design ?? null,
                 'size_id' => $request->size_id,
                 'color_id' => $request->color_id,
                 'printing_type_id' => $request->printing_id,
