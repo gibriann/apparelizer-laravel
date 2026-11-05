@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title')
-    Firmos - Keranjang
+    Firmos - Pengiriman
 @endsection
 
 @push('fontawesome')
@@ -17,9 +17,9 @@
                         <nav>
                             <ol class="breadcrumb">
                                 <li class="breadcrumb-item">
-                                    <a href="/index.html">Beranda</a>
+                                    <a href="/">Beranda</a>
                                 </li>
-                                <li class="breadcrumb-item active">Keranjang</li>
+                                <li class="breadcrumb-item active">Pengiriman</li>
                             </ol>
                         </nav>
                     </div>
@@ -32,19 +32,18 @@
                 <div class="row">
                     <div class="col-sm-6 order-12 order-sm-1">
                         <div class="row" >
-                            
                             <div class="col-12">
                                 <h2 class="mb-4">Detail Pengiriman</h2>
                             </div>
                         </div>
                         <!-- Pengiriman -->
-                        <form action="{{ route('checkout') }}" method="POST">
+                        <form action="{{ route('checkout') }}" method="POST" id="checkoutForm">
                             @csrf
                             <div class="row mb-2">
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label for="user_name">Nama Penerima</label>
-                                        <input type="text" class="form-control @error('user_name') is-invalid @enderror" id="user_name" name="user_name" placeholder="{{ $custDetails->users['name'] }}" value="{{ $custDetails->users['name'] }}" />
+                                        <input type="text" class="form-control @error('user_name') is-invalid @enderror" id="user_name" name="user_name" value="{{ $customer->users['name'] }}" required />
                                         @error('user_name')
                                             <div class="invalid-feedback">
                                                 {{$message}}
@@ -55,163 +54,155 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label for="phone_number">Nomor Telepon</label>
-                                        <input type="number" class="form-control" id="phone_number" name="phone_number" placeholder="{{ $custDetails->phone_number }}" value="{{ $custDetails->phone_number }}" />
+                                        <input type="tel" class="form-control" id="phone_number" name="phone_number" value="{{ $customer->phone_number }}" required />
                                     </div>
                                 </div>
                             </div>
                             
                             <div class="row mb-2">
-                                <div class="col-md-6">
+                                <div class="col-md-12">
                                     <div class="form-group">
-                                        <label for="phone">Provinsi</label>
-                                        <select name="province_name" id="province" class="form-control @error('province_name') is-invalid @enderror" >
-                                                <option value="">Pilih Provinsi</option>
-                                            @foreach ($dataprovinsis as $provinces)
-                                                <option value="{{ $provinces['province_id'] }}"> {{ $provinces['province'] }}</option>
-                                            @endforeach
-                                        </select>
-                                        @error('province_name')
-                                            <div class="invalid-feedback">
-                                                {{$message}}
-                                            </div>
-                                        @enderror
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="district">Distrik</label>
-                                        <select name="district_name" id="district" class="form-control">
-                                            <option value="">Pilih Kabupaten/Kota</option>
-                                    </select>
+                                        <label for="destination_search">Cari Kota/Kecamatan Tujuan</label>
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="destination_search" 
+                                               placeholder="Ketik nama kota atau kecamatan..."
+                                               autocomplete="off"
+                                               required>
+                                        <div id="destination_results" class="list-group mt-2" style="position: absolute; z-index: 1000; max-height: 300px; overflow-y: auto; display: none; width: calc(100% - 30px);"></div>
+                                        <input type="hidden" name="destination_id" id="destination_id" required>
+                                        <input type="hidden" name="kota" id="kota">
+                                        <small class="form-text text-muted">Contoh: Jakarta, Bandung, Surabaya, dll</small>
                                     </div>
                                 </div>
                             </div>
-                            <div class="row mb-2" >
+
+                            <div class="row mb-2">
                                 <div class="col-md-12">
                                     <div class="form-group">
-                                        <label for="address">Alamat</label>
-                                        <input
-                                            type="text"
-                                            class="form-control"
-                                            id="address"
-                                            name="address"
-                                            value="Jalan Jati Perwira No.26"
-                                        />
+                                        <label for="address">Alamat Lengkap</label>
+                                        <textarea class="form-control" 
+                                                  id="address" 
+                                                  name="address" 
+                                                  rows="3"
+                                                  placeholder="Masukkan alamat lengkap..."
+                                                  required></textarea>
                                     </div>
                                 </div>
                             </div>
-                            <div class="row mb-2" >
-                                <div class="col-md-12">
+
+                            <div class="row mb-2">
+                                <div class="col-md-6">
                                     <div class="form-group">
-                                        <label for="postal_code">Kode Pos</label>
-                                        <input type="number" class="form-control" maxlength = "5" id="postal_code" name="postal_code"/>
-                                    </div>
-                                </div>
-                                <div class="col-md-12">
-                                    <div class="form-group">
-                                        <label for="phone">Kurir</label>
-                                        <select name="courier_name" id="courier_name" class="form-control">
+                                        <label for="courier_name">Kurir</label>
+                                        <select name="kurir" id="courier_name" class="form-control" required>
                                             <option value="">Pilih Ekspedisi</option>
+                                            <option value="jne">JNE</option>
                                             <option value="pos">POS Indonesia</option>
                                             <option value="tiki">TIKI</option>
-                                            <option value="jne">JNE</option>
+                                            <option value="jnt">J&T Express</option>
+                                            <option value="sicepat">SiCepat</option>
+                                            <option value="anteraja">AnterAja</option>
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-md-12">
+                                <div class="col-md-6">
                                     <div class="form-group">
-                                        <label for="phone">Durasi</label>
-                                        <select name="service_name" onchange="serviceChange()" id="service_name" class="form-control">
-                                            
+                                        <label for="service_name">Layanan & Durasi</label>
+                                        <select name="kurir_name" id="service_name" class="form-control" required disabled>
+                                            <option value="">Pilih kurir terlebih dahulu</option>
                                         </select>
+                                        <input type="hidden" name="ongkir" id="shipping_cost_value">
                                     </div>
                                 </div>
                             </div>
-                            <div class="row mb-2" >
+
+                            <div class="row mb-2">
                                 <div class="col-md-12">
                                     <div class="form-group">
-                                        <label for="notes">Catatan</label>
-                                        <input type="text" class="form-control" id="notes" name="notes"/>
+                                        <label for="notes">Catatan (Opsional)</label>
+                                        <input type="text" class="form-control" id="notes" name="notes" placeholder="Catatan untuk kurir..."/>
                                     </div>
                                 </div>
                             </div>
+
                             <div class="d-block d-sm-none">
                                 <h2 class="mb-3">Informasi Pembayaran</h2>
                                 <div class="row">
-                                    <div class="col-8 col-sm-8 mt-md-2">
-                                        <div class="product-subtitle">Total Pemesanan</div>
+                                    <div class="col-8">
+                                        <div class="product-subtitle">Subtotal Produk</div>
                                     </div>
-                                    <div class="col-4 col-sm-4 ">
-                                        <div id="total_order" class="product-title text-right">Rp {{ str_replace(',', '.', number_format($total_order))}}</div>
+                                    <div class="col-4">
+                                        <div class="product-title text-right">Rp {{ number_format($total_order, 0, ',', '.') }}</div>
                                     </div>
                                 </div>
                                 <div class="row">
-                                    <div class="col-8 col-sm-8 mt-md-2">
+                                    <div class="col-8">
                                         <div class="product-subtitle">Ongkos Kirim</div>
                                     </div>
-                                    <div class="col-4 col-sm-4">
-                                        <div id="shippingCost" class="text-right" > - </div>
+                                    <div class="col-4">
+                                        <div id="shipping_cost_mobile" class="product-title text-right">-</div>
                                     </div>
                                 </div>
                                 <hr>
                                 <div class="row">
-                                    <div class="col-6 col-sm-6 mt-md-3 ">
-                                        <div class="product-subtitle">Total Pembayaran</div>
+                                    <div class="col-6">
+                                        <div class="product-subtitle font-weight-bold">Total Pembayaran</div>
                                     </div>
-                                    <div class="col-6 col-sm-6">
-                                        <div id="total_payment"  class="product-total text-success text-right">Rp {{ str_replace(',', '.', number_format($total_order))}}</div>
+                                    <div class="col-6">
+                                        <div id="total_payment_mobile" class="product-total text-success text-right font-weight-bold">Rp {{ number_format($total_order, 0, ',', '.') }}</div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="row">
-                                <input type="hidden" name="total_berat" readonly value="{{ $total_weight }}">
-                                {{-- <input type="hidden" name="total" readonly value="{{ $total_order }}"> --}}
-                                <input type="hidden" name="provinsi" readonly>
-                                <input type="hidden" name="distrik" readonly>
-                                <input type="hidden" name="kodepos" readonly>
-                                <input type="hidden" name="ekspedisi" readonly>
-                                <input type="hidden" name="paket" readonly>
-                                <input type="hidden" name="ongkir" readonly>
-                                <input type="hidden" name="estimasi" readonly>
-                                <input type="hidden" name="totalnya" readonly>
+                            <input type="hidden" name="subtotal" value="{{ $total_order }}">
+                            <input type="hidden" name="totalnya" id="total_payment_value" value="{{ $total_order }}">
 
-                                <div class="col-6 col-md-3 mt-3 mt-md-0 ml-auto">
-                                    <button id="pay-button" type="submit" class="py-2 btn text-center btn-success btn-block text-white" > Bayar </button>
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-success btn-block" id="checkout_button">
+                                        <i class="fas fa-shopping-cart mr-2"></i> Lanjutkan Pembayaran
+                                    </button>
                                 </div>
                             </div>
                         </form>
                     </div>
+
                     <div class="col-sm-6 splitter order-1 order-sm-12">
                         <div class="row">
+                            <div class="col-12">
+                                <h2 class="mb-4">Detail Pesanan</h2>
+                            </div>
                         </div>
-                        <div class="row" >
-                            <div class="col-12 table-responsive pr-0">
+                        <div class="row">
+                            <div class="col-12 table-responsive">
                                 <table class="table table-borderless table-cart">
                                     <thead>
                                         <tr>
-                                            <td colspan="2">Detail Produk</td>
-                                            <td>Berat </td>
-                                            <td>Harga </td>
+                                            <th colspan="2">Produk</th>
+                                            <th class="text-center">Berat</th>
+                                            <th class="text-right">Harga</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @foreach ($carts as $cart)
                                         <tr>
-                                            <td class="text-center" style="width: 10%">
-                                                <img style="height:50px;" src=" {{ asset(str_replace('public', 'storage', $cart->products->product_image)) }}" alt="">
+                                            <td style="width: 60px">
+                                                <img style="height:50px; object-fit: cover;" 
+                                                     src="{{ Storage::disk('public')->exists($cart->products->product_image) ? Storage::url($cart->products->product_image) : asset($cart->products->product_image) }}" 
+                                                     alt="{{ $cart->products->product_name }}"
+                                                     class="img-fluid">
                                             </td>
-                                            <td style="width: 30%">
+                                            <td>
                                                 <div class="product-title">{{ $cart->products->product_name }}</div>
                                                 <div class="product-subtitle">{{ $cart->colors->color_name }}, {{ $cart->sizes->size_name }}</div>
+                                                <div class="product-subtitle">Qty: {{ $cart->amount }}</div>
                                             </td>
-                                            <td style="width: 30%">
-                                                <div class="product-title">{{ str_replace(',', '.', number_format($cart->products->product_weight * $cart->amount)) }}Gr</div>
-                                                <div class="product-subtitle">({{ $cart->products->product_weight }}Gr/pcs)</div>
+                                            <td class="text-center">
+                                                <div class="product-title">{{ number_format($cart->products->product_weight * $cart->amount, 0, ',', '.') }}g</div>
                                             </td>
-                                            <td style="width: 30%">
-                                                <div class="product-title">Rp {{ str_replace(',', '.', number_format($cart->products->product_price * $cart->amount))   }}</div>
-                                                <div class="product-subtitle">Qty : {{  $cart->amount }}</div>
+                                            <td class="text-right">
+                                                <div class="product-title">Rp {{ number_format($cart->products->product_price * $cart->amount, 0, ',', '.') }}</div>
                                             </td>
                                         </tr>
                                         @endforeach
@@ -222,30 +213,38 @@
 
                         <hr>
                         <div class="d-none d-sm-block">
-                            <h2 class="mb-3">Informasi Pembayaran</h2>
-                            <div class="row">
-                                <div class="col-8 col-sm-8 mt-md-2">
-                                    <div class="product-subtitle">Total Pemesanan</div>
+                            <h2 class="mb-3">Ringkasan Pembayaran</h2>
+                            <div class="row mb-2">
+                                <div class="col-8">
+                                    <div class="product-subtitle">Subtotal Produk</div>
                                 </div>
-                                <div class="col-4 col-sm-4 ">
-                                    <div id="total_orderPC" class="product-title text-right">Rp {{ str_replace(',', '.', number_format($total_order))}}</div>
+                                <div class="col-4">
+                                    <div class="product-title text-right">Rp {{ number_format($total_order, 0, ',', '.') }}</div>
                                 </div>
                             </div>
-                            <div class="row">
-                                <div class="col-8 col-sm-8 mt-md-2">
+                            <div class="row mb-2">
+                                <div class="col-8">
+                                    <div class="product-subtitle">Berat Total</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="product-title text-right">{{ number_format($total_weight, 0, ',', '.') }} gram</div>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-8">
                                     <div class="product-subtitle">Ongkos Kirim</div>
                                 </div>
-                                <div class="col-4 col-sm-4">
-                                    <div id="shippingCostPC" class="product-title text-right"> - </div>
+                                <div class="col-4">
+                                    <div id="shipping_cost_desktop" class="product-title text-right">-</div>
                                 </div>
                             </div>
                             <hr>
                             <div class="row">
-                                <div class="col-6 col-sm-6 mt-md-3 ">
-                                    <div class="product-subtitle">Total Pembayaran</div>
+                                <div class="col-6">
+                                    <div class="product-subtitle font-weight-bold">Total Pembayaran</div>
                                 </div>
-                                <div class="col-6 col-sm-6">
-                                    <div id="total_paymentPC"  class="product-total text-success text-right">Rp {{ str_replace(',', '.', number_format($total_order))}}</div>
+                                <div class="col-6">
+                                    <div id="total_payment_desktop" class="product-total text-success text-right font-weight-bold">Rp {{ number_format($total_order, 0, ',', '.') }}</div>
                                 </div>
                             </div>
                         </div>
@@ -254,151 +253,178 @@
             </div>
         </section>
     </div>
-    
-    
 @endsection
 
 @push('addon-script')
-    <script src="https://code.jquery.com/jquery-3.6.1.min.js" integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ=" crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/jquery-3.6.1.min.js"></script>
+<script>
+$(document).ready(function() {
+    const TOTAL_ORDER = {{ $total_order }};
+    const TOTAL_WEIGHT = {{ $total_weight }};
+    let searchTimeout;
+    let selectedDestinationId = null;
 
-    <script>
-        function serviceChange() {
-            var durasi = $("#service_name").find(":selected").val();
-            var ongkir = formatRupiah(durasi, 'Rp ');
-            $('#shippingCost').html(ongkir);
-            $('#shippingCostPC').html(ongkir);
-
-            var totalOrder = {{ $total_order }};
-            var totalPayment = parseInt(durasi) + totalOrder;
-            var totalPaymentView = (formatRupiah(totalPayment.toString(), 'Rp '));
-            $("#total_payment").html(totalPaymentView);
-            $("#total_paymentPC").html(totalPaymentView);
-            $("input[name=totalnya]").val(totalPayment);
+    // Search destination with debounce
+    $('#destination_search').on('input', function() {
+        clearTimeout(searchTimeout);
+        const searchQuery = $(this).val().trim();
+        
+        if (searchQuery.length < 3) {
+            $('#destination_results').hide();
+            return;
         }
 
-        function formatRupiah(angka, prefix) {
-			var number_string = angka.replace(/[^,\d]/g, '').toString(),
-			split   		= number_string.split(','),
-			sisa     		= split[0].length % 3,
-			rupiah     		= split[0].substr(0, sisa),
-			ribuan     		= split[0].substr(sisa).match(/\d{3}/gi);
-
-			// tambahkan titik jika yang di input sudah menjadi angka ribuan
-			if(ribuan){
-				separator = sisa ? '.' : '';
-				rupiah += separator + ribuan.join('.');
-			}
-
-			rupiah = split[1] != undefined ? rupiah + ',' + split[1] : rupiah;
-			return prefix == undefined ? rupiah : (rupiah ? 'Rp ' + rupiah : '');
-		}
-
-        $(document).ready(function(){
+        searchTimeout = setTimeout(function() {
             $.ajax({
-                type:'post',
-                url:'dataprovinsi.php',
-                success:function(hasil_provinsi)
-                {
-                    let provinceOptionsHtml = `<option value=''>Pilih Provinsi</option>`
-                    $("select[name=province_name]").html(hasil_provinsi);
+                url: '/shipping/search-destination',
+                method: 'GET',
+                data: {
+                    search: searchQuery,
+                    limit: 10
+                },
+                success: function(response) {
+                    if (response.meta.status === 'success' && response.data.length > 0) {
+                        let html = '';
+                        response.data.forEach(function(item) {
+                            html += `
+                                <a href="#" class="list-group-item list-group-item-action destination-item" 
+                                   data-id="${item.id}" 
+                                   data-label="${item.label}">
+                                    <strong>${item.subdistrict}</strong>, ${item.city}, ${item.province}
+                                    <br><small class="text-muted">Kode Pos: ${item.zip_code || '-'}</small>
+                                </a>
+                            `;
+                        });
+                        $('#destination_results').html(html).show();
+                    } else {
+                        $('#destination_results').html('<div class="list-group-item">Tidak ada hasil ditemukan</div>').show();
+                    }
+                },
+                error: function() {
+                    $('#destination_results').html('<div class="list-group-item text-danger">Error mencari lokasi</div>').show();
                 }
             });
+        }, 500);
+    });
 
-            //Pilih provinsi
-            $("select[name=province_name]").on("change",function(){
-                var id_provinsi_terpilih = $("option:selected",this).attr("value");
-                //Hit API local -> yang nge hit -> raja ongkir ambil districts 
-                $.ajax({
-                    type:'get',
-                    url:'/rajaongkir/provinsi/' + id_provinsi_terpilih + '/distrik',
-                    data:'id_provinsi='+id_provinsi_terpilih,
-                    success:function(hasil_distrik)
-                    {
-                        //Ngerapihin data dari API
-                        const dataDistriks = hasil_distrik.datadistrik;
+    // Select destination
+    $(document).on('click', '.destination-item', function(e) {
+        e.preventDefault();
+        selectedDestinationId = $(this).data('id');
+        const label = $(this).data('label');
+        
+        $('#destination_search').val(label);
+        $('#destination_id').val(selectedDestinationId);
+        $('#kota').val(label);
+        $('#destination_results').hide();
+        
+        // Reset courier selection when destination changes
+        $('#service_name').prop('disabled', true).html('<option value="">Pilih kurir terlebih dahulu</option>');
+        $('#courier_name').val('');
+        updateShippingCost(0);
+    });
 
-                        let districtOptionsHtml = `<option value=''>Pilih Kabupaten/Kota</option>`
-                        dataDistriks.forEach(dataDistrik => {
-                            districtOptionsHtml += `<option value="${dataDistrik.city_id}">${dataDistrik.type} ${dataDistrik.city_name}</option>`
-                        });
+    // Hide results when clicking outside
+    $(document).click(function(e) {
+        if (!$(e.target).closest('#destination_search, #destination_results').length) {
+            $('#destination_results').hide();
+        }
+    });
 
-                        //Masukkin ke dropdown district
-                        $("select[name=district_name]").html(districtOptionsHtml);
-                    }
-                });
-            });
+    // Calculate shipping cost when courier is selected
+    $('#courier_name').on('change', function() {
+        const courier = $(this).val();
+        
+        if (!courier) {
+            $('#service_name').prop('disabled', true).html('<option value="">Pilih kurir terlebih dahulu</option>');
+            return;
+        }
 
-            $.ajax({
-                type:'post',
-                url:'dataekspedisi.php',
-                success:function(hasil_ekspedisi)
-                {
-                    $("select[name=courier_name]").html(hasil_ekspedisi);
+        if (!selectedDestinationId) {
+            alert('Silakan pilih tujuan pengiriman terlebih dahulu');
+            $(this).val('');
+            return;
+        }
+
+        $('#service_name').prop('disabled', true).html('<option value="">Loading...</option>');
+
+        // Origin ID (hardcoded - should be from admin settings)
+        const originId = 31555; // Example: Jakarta Pusat
+
+        $.ajax({
+            url: '/shipping/calculate-cost',
+            method: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                origin: originId,
+                destination: selectedDestinationId,
+                weight: TOTAL_WEIGHT,
+                courier: courier
+            },
+            success: function(response) {
+                if (response.meta.status === 'success' && response.data.length > 0) {
+                    let html = '<option value="">Pilih layanan</option>';
+                    response.data.forEach(function(service) {
+                        const serviceName = `${service.service} (${service.description})`;
+                        const etd = service.etd || '-';
+                        html += `<option value="${service.cost}" data-service="${service.service}" data-etd="${etd}">
+                                    ${serviceName} - Rp ${formatNumber(service.cost)} (${etd} hari)
+                                 </option>`;
+                    });
+                    $('#service_name').html(html).prop('disabled', false);
+                } else {
+                    $('#service_name').html('<option value="">Tidak ada layanan tersedia</option>');
+                    alert('Kurir tidak tersedia untuk tujuan ini');
                 }
-            });
-
-            // Pilih ekspedisi
-            $("select[name=courier_name]").on("change",function(){
-                // mendapatkan ekspedisi yang dipilih
-                var ekspedisi_terpilih = $("select[name=courier_name]").val();
-
-                // mendapatkan id_distrik yang dilipih pengguna
-                var distrik_terpilih = $("option:selected","select[name=district_name]").attr("value");
-
-                // mendapatkan total berat dari inputan
-                var total_berat = $("input[name=total_berat]").val();
-                $.ajax({
-                    type:'get',
-                    url:'/rajaongkir/ekspedisi/' + ekspedisi_terpilih + '/distrik/' + distrik_terpilih + '/berat/' + total_berat,
-                    data: 'ekspedisi='+ekspedisi_terpilih+'&distrik='+distrik_terpilih+'&berat='+total_berat,
-                    success:function(hasil_paket)
-                    {
-                        const dataPakets = hasil_paket.paket;
-                        
-                        let paketOptionsHtml = `<option value=''> Pilih Paket </option>`
-                        dataPakets.forEach(dataPaket => {
-                            paketOptionsHtml += `<option value="${dataPaket["cost"]["0"]["value"]}" etd="${dataPaket["cost"]["0"]["etd"]}" paket="${dataPaket.service}"> ${dataPaket.service}  (${dataPaket["cost"]["0"]["etd"]}) </option>`
-                        });
-                        $("select[name=service_name]").html(paketOptionsHtml);
-                        $("input[name=ekspedisi]").val(ekspedisi_terpilih);
-                    }
-                });
-            });
-            
-            $("select[name=district_name]").on("change",function(){
-                var prov = $("#province option:selected").text();
-                var dist = $("#district option:selected").text();
-                
-                $("input[name=provinsi]").val(prov);
-                $("input[name=distrik]").val(dist);
-            });
-
-            $("#postal_code").on("input", function(){
-                if (this.value.length > this.maxLength) this.value = this.value.slice(0, this.maxLength);
-
-                var postal_code = $("#postal_code").val();
-                $("input[name=kodepos]").val(postal_code);
-            });
-
-            $("select[name=service_name]").on("change",function(){
-                var paket = $("option:selected", this).attr("paket");
-                var etd = $("option:selected", this).attr("etd");
-                var durasi = $("#service_name").find(":selected").val();
-                
-                $("input[name=paket]").val(paket);
-                $("input[name=estimasi]").val(etd);
-                $("input[name=ongkir]").val(durasi);
-            })
+            },
+            error: function(xhr) {
+                $('#service_name').html('<option value="">Error memuat layanan</option>');
+                alert('Gagal menghitung ongkir. Silakan coba lagi.');
+            }
         });
-    </script>
+    });
 
-    <script type="text/javascript">
-        // For example trigger on button clicked, or any time you need
-        var payButton = document.getElementById('pay-button');
-        payButton.addEventListener('click', function () {
-        // Trigger snap popup. @TODO: Replace TRANSACTION_TOKEN_HERE with your transaction token
-        window.snap.pay('TRANSACTION_TOKEN_HERE');
-        // customer will be redirected after completing payment pop-up
-        });
-    </script>
+    // Update total when service is selected
+    $('#service_name').on('change', function() {
+        const shippingCost = parseInt($(this).val()) || 0;
+        updateShippingCost(shippingCost);
+    });
+
+    function updateShippingCost(cost) {
+        const total = TOTAL_ORDER + cost;
+        
+        $('#shipping_cost_value').val(cost);
+        $('#total_payment_value').val(total);
+        
+        const costFormatted = cost > 0 ? 'Rp ' + formatNumber(cost) : '-';
+        const totalFormatted = 'Rp ' + formatNumber(total);
+        
+        $('#shipping_cost_mobile, #shipping_cost_desktop').text(costFormatted);
+        $('#total_payment_mobile, #total_payment_desktop').text(totalFormatted);
+    }
+
+    function formatNumber(num) {
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    }
+
+    // Form validation before submit
+    $('#checkoutForm').on('submit', function(e) {
+        if (!selectedDestinationId) {
+            e.preventDefault();
+            alert('Silakan pilih tujuan pengiriman');
+            $('#destination_search').focus();
+            return false;
+        }
+
+        if (!$('#service_name').val()) {
+            e.preventDefault();
+            alert('Silakan pilih layanan pengiriman');
+            $('#service_name').focus();
+            return false;
+        }
+
+        return true;
+    });
+});
+</script>
 @endpush

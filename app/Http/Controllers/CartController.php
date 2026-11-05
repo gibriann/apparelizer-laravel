@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use App\Models\Cart;
 use App\Models\Customer;
 use App\Models\Product;
@@ -53,140 +53,104 @@ class CartController extends Controller
             Alert::toast('Keranjang kosong, silahkan belanja', 'error');
             return redirect('/products');
         } else{
-            $custDetails = Customer::where('user_id', auth()->user()->id)->first();
+            $customer = Customer::where('user_id', auth()->user()->id)->first();
+
             $total_weight = 0;
-            $dataprovinsis = $this->province();
+            foreach ($carts as $cart) {
+                $total_weight += $cart->products->product_weight * $cart->amount;
+                
+            }
             $total_val = [];
             foreach ($carts as $cart) {
-                $weight = $cart->products->product_weight * $cart->amount;
-                $total_weight += $weight;
-
                 array_push($total_val, $cart->products->product_price * $cart->amount);
+                
             }
             $total_order = array_sum($total_val);
-            return view('pages.shipment', compact('carts', 'custDetails', 'dataprovinsis', 'total_weight', 'total_order'));
+            return view('pages.shipment', compact('carts', 'customer', 'total_order', 'total_weight'));
         }
     }
 
-    public function store(Request $request, $id, $slug )
+    public function store(Request $request, $id, $slug)
     {
-        $rules = [
-            'size_id' => 'required',
-            'color_id' => 'required',
-            'printing_id' => 'required',
-            'amount' => 'required|integer|between:6,150',
-            'link_design' => 'required'
-        ];
-        
-        $customMessage = [
-            'required' => 'Silahkan masukan :attribute',
-            'between' => ':attribute hanya :min - :max.',
-        ];
-        
-        $attributeName = [
-            'size_id' => 'ukuran',
-            'color_id' => 'warna',
-            'printing_id' => 'jenis sablon',
-            'amount' => 'jumlah',
-            'link_design' => 'link desain',
-        ];
+        $product = Product::where('id', $id)->first();
+        $carts = Cart::where('user_id', auth()->user()->id)->where('product_id', $id)->first();
 
-        $this->validate($request, $rules, $customMessage, $attributeName);
+        if ($carts) {
+            if ($request->amount != null) {
+                $carts->amount = $carts->amount + $request->amount;
+            } else {
+                $carts->amount = $carts->amount + 1;
+            }
+            if (!empty($request->file('linkdesain'))) {
+                $imageName = time() . '.' . $request->linkdesain->extension();
+                $request->linkdesain->move(public_path('images'), $imageName);
+                $carts->link_design = 'images/' . $imageName;
+            }
+            $carts->update();
 
-        $product = Product::where('id', $id)->where('slug', $slug)->first();
-        $cart = Cart::where([
-            'user_id' => auth()->user()->id,
-            'product_id' => $product->id,
-            'size_id' => $request->size_id,
-            'color_id' => $request->color_id,
-            'link_design' => $request->link_design,
-            'printing_id' => $request->printing_id
-        ])->first();
+        } else {
 
-        if ($cart == null){
+            $imageName = '';
+            if (!empty($request->file('linkdesain'))) {
+                $imageName = time() . '.' . $request->linkdesain->extension();
+                $request->linkdesain->move(public_path('images'), $imageName);
+            }
+
+
             Cart::create([
                 'user_id' => auth()->user()->id,
-                'product_id' => $product->id,
-                'size_id' => $request->size_id,
-                'color_id' => $request->color_id,
-                'printing_id' => $request->printing_id,
-                'amount' => $request->amount,
-                'link_design' => $request->link_design,
+                'product_id' => $id,
+                'amount' => $request->amount != null ? $request->amount : 1,
+                'link_design' => $imageName != '' ? 'images/' . $imageName : null,
+                'size_id' => $request->size,
+                'color_id' => $request->color,
+                'printing_type_id' => $request->jenis_sablon,
+                'notes' => $request->notes ? $request->notes : null
             ]);
-            Alert::success('Berhasil', 'Produk telah ditambahkan ke keranjang!');
-            return redirect('/cart');
-        } else {
-            $amount = $cart->amount + $request->amount;
-            $cart->update([
-                'amount' => $amount
-            ]);
-            return redirect('/cart');
         }
-    }
-    
-    public function storePayment(Request $request){
-        $rules = [
-            'user_name' => 'required',
-            'phone_number' => 'required',
-            'province_name' => 'required',
-            'district_name' => 'required',
-            'address' => 'required',
-            'postal_code' => 'required',
-            'courier_name' => 'required',
-            'service_name' => 'required'
-        ];
-        
-        $customMessage = [
-            'required' => 'Silahkan masukan :attribute',
-        ];
-        
-        $attributeName = [
-            'user_name' => 'Nama penerima',
-            'phone_number' => 'Nomor Telepon',
-            'province_name' => 'Provinsi',
-            'district_name' => 'Kota/Kabupaten',
-            'address' => 'Alamat',
-            'postal_code' => 'Kode Pos',
-            'courier_name' => 'Kurir pilihan',
-            'service_name' => 'Paket pilihan'
-        ];
 
-        $this->validate($request, $rules, $customMessage, $attributeName);
-        
-        $code = 'FMS-' . mt_rand(00000, 99999);
+        Alert::toast('Berhasil ditambah ke keranjang', 'success');
+        return redirect()->back();
+    }
+
+    public function delete($id)
+    {
+        $carts = Cart::where('id', $id)->first();
+        $carts->delete();
+        Alert::toast('Berhasil dihapus dari keranjang', 'success');
+        return redirect()->back();
+    }
+
+    public function storePayment(Request $request)
+    {
+        $code = 'TRX-' . mt_rand(00000, 99999);
+        $carts = Cart::where('user_id', Auth::user()->id)->get();
+
         $purchase = Purchase::create([
-            'user_id' => auth()->user()->id,
+            'transaction_code' => $code,
+            'transaction_total_price' => $request->totalnya,
+            'transaction_subtotal_price' => $request->subtotal,
+            'transaction_total_shipping_price' => $request->ongkir,
             'shipping_status_id' => 1,
             'payment_status_id' => 1,
-            'total_payment' => $request->totalnya,
-            'total_weight' => $request->total_berat,
-            'shipment_fee' => $request->ongkir,
-            'shipment_receipt' => null,
+            'user_id' => Auth::user()->id,
+            'recipient_name' => $request->user_name,
             'recipient_address' => $request->address,
-            'recipient' => $request->user_name,
-            'recipient_number' =>$request->phone_number,
-            'province' => $request->provinsi,
-            'district' => $request->distrik,
-            'postal_code' => $request->postal_code,
-            'courier' => $request->ekspedisi,
-            'service' => $request->paket,
-            'etd' => $request->estimasi,
-            'notes' => $request->notes,
-            'code' => $code
+            'recipient_city' => $request->kota,
+            'recipient_phone_number' => $request->phone_number,
+            'shipping_courier' => $request->kurir,
+            'shipping_service' => $request->kurir_name,
         ]);
 
-        $carts = Cart::where('user_id', auth()->user()->id)->get();
         foreach ($carts as $cart) {
             PurchasedProduct::create([
                 'purchase_id' => $purchase->id,
                 'product_id' => $cart->product_id,
-                'quantity' => $cart->amount,
-                'sub_weight' => $cart->products->product_weight,
-                'total_order' => $cart->products->product_price * $cart->amount,
-                'product_name' => $cart->products->product_name,
+                'amount' => $cart->amount,
                 'size_id' => $cart->size_id,
                 'color_id' => $cart->color_id,
-                'printing_id' => $cart->printing_id,
+                'printing_type_id' => $cart->printing_type_id,
+                'notes' => $cart->notes,
                 'product_design' => $cart->link_design,
             ]);
         }
@@ -218,232 +182,222 @@ class CartController extends Controller
             Purchase::where('id', $purchase->id)->update([
                 'payment_url' => $paymentUrl,
             ]);
-            header('Location: ' . $paymentUrl);
+
+            return redirect($paymentUrl);
         } catch (Exception $e) {
             echo $e->getMessage();
         }
-
-
-        return redirect($paymentUrl);
     }
 
-    public function callback(Request $request) {
+    public function success()
+    {
+
+        $purchases = Purchase::where('user_id', auth()->user()->id)->orderBy('created_at', 'desc')->first();
+
+
+        return view('pages.success', compact('purchases'));
+    }
+
+    public function callback(Request $request)
+    {
         // Set konfigurasi midtrans
-        Config::$serverKey = config('services.midtrans.serverKey');
-        Config::$isProduction = config('services.midtrans.isProduction');
-        Config::$isSanitized = config('services.midtrans.isSanitized');
-        Config::$is3ds = config('services.midtrans.is3ds');
+        Config::$serverKey = config('midtrans.server_key');
+        Config::$isProduction = config('midtrans.is_production');
 
-        // Buat instance midtrans notification
+        // Instance midtrans notification
+        $notification = new Notification();
 
-        
-        // Assign ke variable untuk memudahkan coding
-        $notification_body = json_decode($request->getContent(), true);
-        $order_id = $notification_body['order_id'];
-        $type = $notification_body['payment_type'];
-        $fraud = $notification_body['fraud_status'];
-        $status = $notification_body['transaction_status'];
-        
+        // Assign ke variable untuk memudahkan 
+        $status = $notification->transaction_status;
+        $type = $notification->payment_type;
+        $fraud = $notification->fraud_status;
+        $order_id = $notification->order_id;
 
         // Cari transaksi berdasarkan ID
-        $purchase = Purchase::where('code', $order_id)->first();
+        $transaction = Purchase::where('transaction_code', $order_id)->first();
 
         // Handle notification status midtrans
         if ($status == 'capture') {
-            if ($type == 'credit_card'){
-                if($fraud == 'challenge'){
-                    $purchase->payment_status_id = 3;
-                }
-                else {
-                    $purchase->payment_status_id = 2;
+            if ($type == 'credit_card') {
+                if ($fraud == 'challenge') {
+                    $transaction->payment_status_id = 1;
+                } else {
+                    $transaction->payment_status_id = 2;
                 }
             }
-        }
-        else if ($status == 'settlement'){
-            $purchase->payment_status_id = 2;
-            $purchase->shipping_status_id = 2;
-        }
-        else if($status == 'pending'){
-            $purchase->payment_status_id = 1;
-        }
-        else if ($status == 'deny') {
-            $purchase->payment_status_id = 3;
-            $purchase->shipping_status_id = 6;
-
-        }
-        else if ($status == 'expire') {
-            $purchase->payment_status_id = 3;
-            $purchase->shipping_status_id = 6;
-        }
-        else if ($status == 'cancel') {
-            $purchase->payment_status_id = 3;
-            $purchase->shipping_status_id = 6;
+        } else if ($status == 'settlement') {
+            $transaction->payment_status_id = 2;
+        } else if ($status == 'pending') {
+            $transaction->payment_status_id = 1;
+        } else if ($status == 'deny') {
+            $transaction->payment_status_id = 1;
+        } else if ($status == 'expire') {
+            $transaction->payment_status_id = 1;
+        } else if ($status == 'cancel') {
+            $transaction->payment_status_id = 1;
         }
 
         // Simpan transaksi
-        $purchase->save();
+        $transaction->save();
 
-        // Kirimkan email
-        if ($purchase)
-        {
-            if($status == 'capture' && $fraud == 'accept' )
-            {
+        // Kirim email midtrans
+        if ($transaction) {
+            if ($status == 'capture' && $fraud == 'accept') {
+                //
+            } else if ($status == 'settlement') {
+                //
+            } else if ($status == 'pending') {
+                //
+            } else if ($status == 'deny') {
+                //
+            } else if ($status == 'expire') {
+                //
+            } else if ($status == 'cancel') {
                 //
             }
-            else if ($status == 'settlement')
-            {
-                //
-            }
-            else if ($status == 'success')
-            {
-                //
-            }
-            else if($status == 'capture' && $fraud == 'challenge' )
-            {
+        }
+
+        // Retun response untuk midtrans
+        return response()->json([
+            'meta' => [
+                'code' => 200,
+                'message' => 'Midtrans Notification Success'
+            ]
+        ]);
+    }
+
+    /**
+     * Search domestic destination using RajaOngkir API V2
+     * New endpoint: GET /destination/domestic-destination
+     */
+    public function searchDestination(Request $request)
+    {
+        $search = $request->input('search', '');
+        $limit = $request->input('limit', 10);
+        $offset = $request->input('offset', 0);
+
+        try {
+            $response = Http::withHeaders([
+                'key' => config('rajaongkir.api_key')
+            ])->get('https://rajaongkir.komerce.id/api/v1/destination/domestic-destination', [
+                'search' => $search,
+                'limit' => $limit,
+                'offset' => $offset
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                return response()->json($data);
+            } else {
                 return response()->json([
                     'meta' => [
-                        'code' => 200,
-                        'message' => 'Midtrans Payment Challenge'
-                    ]
-                ]);
+                        'code' => $response->status(),
+                        'message' => 'Failed to fetch destinations',
+                        'status' => 'error'
+                    ],
+                    'data' => null
+                ], $response->status());
             }
-            else
-            {
-                return response()->json([
-                    'meta' => [
-                        'code' => 200,
-                        'message' => 'Midtrans Payment not Settlement'
-                    ]
-                ]);
-            }
-
+        } catch (Exception $e) {
             return response()->json([
                 'meta' => [
-                    'code' => 200,
-                    'message' => 'Midtrans Notification Success'
-                ]
-            ]);
+                    'code' => 500,
+                    'message' => $e->getMessage(),
+                    'status' => 'error'
+                ],
+                'data' => null
+            ], 500);
         }
     }
 
+    /**
+     * Calculate domestic shipping cost using RajaOngkir API V2
+     * New endpoint: POST /calculate/domestic-cost
+     */
+    public function calculateCost(Request $request)
+    {
+        $validated = $request->validate([
+            'origin' => 'required|integer',
+            'destination' => 'required|integer',
+            'weight' => 'required|integer|min:1',
+            'courier' => 'required|string'
+        ]);
+
+        try {
+            $response = Http::withHeaders([
+                'key' => config('rajaongkir.api_key'),
+                'Content-Type' => 'application/x-www-form-urlencoded'
+            ])->asForm()->post('https://rajaongkir.komerce.id/api/v1/calculate/domestic-cost', [
+                'origin' => $validated['origin'],
+                'destination' => $validated['destination'],
+                'weight' => $validated['weight'],
+                'courier' => $validated['courier'],
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                return response()->json($data);
+            } else {
+                return response()->json([
+                    'meta' => [
+                        'code' => $response->status(),
+                        'message' => 'Failed to calculate shipping cost',
+                        'status' => 'error'
+                    ],
+                    'data' => null
+                ], $response->status());
+            }
+        } catch (Exception $e) {
+            return response()->json([
+                'meta' => [
+                    'code' => 500,
+                    'message' => $e->getMessage(),
+                    'status' => 'error'
+                ],
+                'data' => null
+            ], 500);
+        }
+    }
+
+    // Keep old methods for backward compatibility, but mark as deprecated
+    // These will be removed in future versions
+    
+    /**
+     * @deprecated Use searchDestination() instead
+     */
     public function province()
     {
-        $curl = curl_init();
-
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => "https://api.rajaongkir.com/starter/province",
-            CURLOPT_SSL_VERIFYHOST => 0,
-            CURLOPT_SSL_VERIFYPEER => 0,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => "",
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => "GET",
-            CURLOPT_HTTPHEADER => array(
-                "key: " . config('rajaongkir.api_key')
-            ),
-        ));
-        
-        $response = curl_exec($curl);
-        $err = curl_error($curl);
-        
-        curl_close($curl);
-        
-        if ($err) {
-            echo "cURL Error #:" . $err;
-            } else {
-        
-            $array_response = json_decode($response, TRUE);
-            $dataprovinsi = $array_response["rajaongkir"]["results"];
-        }
-        return $dataprovinsi;
+        // Redirect to new search-based method
+        return $this->searchDestination(new Request());
     }
 
+    /**
+     * @deprecated Use searchDestination() instead
+     */
     public function district($idProvinsi) 
     {
-        
-        $id_provinsi_terpilih = $idProvinsi;
-        // dd($id_provinsi_terpilih);
-        $curl = curl_init();
-        
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => "https://api.rajaongkir.com/starter/city?province=".$id_provinsi_terpilih,
-            CURLOPT_SSL_VERIFYHOST => 0,
-            CURLOPT_SSL_VERIFYPEER => 0,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => "",
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => "GET",
-            CURLOPT_HTTPHEADER => array(
-                "key: " . config('rajaongkir.api_key')
-            ),
-        ));
-        
-        $response = curl_exec($curl);
-        $err = curl_error($curl);
-        
-        curl_close($curl);
-        $array_response = json_decode($response, TRUE);
-        $datadistrik = $array_response["rajaongkir"]["results"];
-
-
         return response()->json([
-            'datadistrik' => $datadistrik
-        ]);
-        
+            'meta' => [
+                'code' => 410,
+                'message' => 'This endpoint is deprecated. Please use the new search-based destination API.',
+                'status' => 'error'
+            ],
+            'data' => null
+        ], 410);
     }
 
+    /**
+     * @deprecated Use calculateCost() instead
+     */
     public function options($ekspedisi, $idDistrik, $berat) 
     {
-        
-        $ekspedisi_terpilih = $ekspedisi;
-        $distrik_terpilih = $idDistrik;
-        $total_berat = $berat;
-        $curl = curl_init();
-
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => "https://api.rajaongkir.com/starter/cost",
-            CURLOPT_SSL_VERIFYHOST => 0,
-            CURLOPT_SSL_VERIFYPEER => 0,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => "",
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => "POST",
-            CURLOPT_POSTFIELDS => "origin=37&destination=".$distrik_terpilih."&weight=".$total_berat."&courier=".$ekspedisi_terpilih,
-            CURLOPT_HTTPHEADER => array(
-                "content-type: application/x-www-form-urlencoded",
-                "key: " . config('rajaongkir.api_key')
-            ),
-        ));
-
-        $response = curl_exec($curl);
-        $err = curl_error($curl);
-
-        curl_close($curl);
-        $array_response = json_decode($response,TRUE);
-        $paket = $array_response["rajaongkir"]["results"]["0"]["costs"];
-        // var_dump($paket); exit;
-
         return response()->json([
-            'paket' => $paket
-        ]);
-    }
-
-    public function delete($id){
-        $cart = Cart::find($id);
-        if ($cart->user_id==auth()->user()->id) {
-            Cart::destroy($id);
-
-            Alert::toast('Berhasil Menghapus', 'success');
-            return redirect(route('cart'));
-        } else {
-            Alert::toast('Gagal Menghapus', 'error');
-            return redirect(route('cart'));
-        }
+            'meta' => [
+                'code' => 410,
+                'message' => 'This endpoint is deprecated. Please use the new calculate cost API.',
+                'status' => 'error'
+            ],
+            'data' => null
+        ], 410);
     }
 }

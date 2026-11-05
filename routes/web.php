@@ -45,9 +45,12 @@ Route::post('/checkout/callback', [CartController::class, 'callback'])->name('mi
 Route::middleware(['auth','checkrole: 3'])->group(function () {
     Route::post('/cart/delete/{id}', [CartController::class, 'delete']);
     Route::post('/cart/{id}/{slug}', [CartController::class, 'store']);
-    Route::get('/cart/dataprovinsi', [CartController::class, 'province']);
+    
+    // New RajaOngkir API V2 endpoints
+    Route::get('/shipping/search-destination', [CartController::class, 'searchDestination']);
+    Route::post('/shipping/calculate-cost', [CartController::class, 'calculateCost']);
+    
     Route::post('/checkout', [CartController::class, 'storePayment'])->name('checkout');
-
     Route::post('/account', [AccountController::class, 'update']);
     
     Route::get('/cart', [CartController::class, 'index'])->name('cart');
@@ -56,8 +59,10 @@ Route::middleware(['auth','checkrole: 3'])->group(function () {
     Route::get('/account', [AccountController::class, 'account'])->name('account');
     Route::get('/history', [TransactionController::class, 'history'])->name('history');
     Route::get('/transactions/{id}/details', [TransactionController::class, 'show'])->name('transaction-details');
-
 });
+
+// Deprecated old RajaOngkir endpoints (kept for backward compatibility)
+Route::get('/cart/dataprovinsi', [CartController::class, 'province'])->middleware(['auth','checkrole: 3']);
 Route::get('/rajaongkir/provinsi/{idProvinsi}/distrik', [CartController::class, 'district']);
 Route::get('/rajaongkir/ekspedisi/{ekspedisi_terpilih}/distrik/{distrik_terpilih}/berat/{total_weight}', [CartController::class, 'options']);
 
