@@ -48,8 +48,8 @@
                     @csrf
                         <div class="form-group row">
                             <div class="col-12 col-lg-10" data-aos="zoom-in" data-aos-delay="200">
-                                <select class="custom-select @error('color_id') is-invalid @enderror" name="color_id">
-                                    <option value="">Warna</option>
+                                <select class="custom-select @error('color_id') is-invalid @enderror" name="color_id" required>
+                                    <option value="">Warna *</option>
                                     @foreach ($colors as $color)
                                         <option value="{{ $color->id }}" @if (old('color_id') == "$color->id") {{ 'selected' }} @endif>{{ $color->color_name }}</option>
                                     @endforeach
@@ -64,8 +64,8 @@
 
                         <div class="form-group row">
                             <div class="col-12 col-lg-10" data-aos="zoom-in" data-aos-delay="250">
-                                <select class="custom-select @error('size_id') is-invalid @enderror" name="size_id">
-                                    <option value="">Ukuran</option>
+                                <select class="custom-select @error('size_id') is-invalid @enderror" name="size_id" required>
+                                    <option value="">Ukuran *</option>
                                     @foreach ($sizes as $size)
                                         <option value="{{ $size->id }}" @if (old('size_id') == "$size->id") {{ 'selected' }} @endif>{{ $size->size_name }}</option>
                                     @endforeach

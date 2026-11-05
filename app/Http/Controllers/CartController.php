@@ -102,8 +102,8 @@ class CartController extends Controller
                 'product_id' => $id,
                 'amount' => $request->amount != null ? $request->amount : 1,
                 'link_design' => $imageName != '' ? 'images/' . $imageName : null,
-                'size_id' => $request->size,
-                'color_id' => $request->color,
+                'size_id' => $request->size_id,
+                'color_id' => $request->color_id,
                 'printing_type_id' => $request->printing_id,
                 'notes' => $request->notes ? $request->notes : null
             ]);
