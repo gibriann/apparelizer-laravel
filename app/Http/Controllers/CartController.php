@@ -156,12 +156,13 @@ class CartController extends Controller
             PurchasedProduct::create([
                 'purchase_id' => $purchase->id,
                 'product_id' => $cart->product_id,
-                'amount' => $cart->amount,
+                'quantity' => $cart->amount,
                 'size_id' => $cart->size_id,
                 'color_id' => $cart->color_id,
-                'printing_type_id' => $cart->printing_type_id,
-                'notes' => $cart->notes,
-                'product_design' => $cart->link_design,
+                'printing_id' => $cart->printing_type_id,
+                'sub_weight' => $cart->products->product_weight * $cart->amount,
+                'total_order' => $cart->products->product_price * $cart->amount,
+                'product_design' => $cart->link_design ?? '',
             ]);
         }
 
