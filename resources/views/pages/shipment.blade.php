@@ -289,32 +289,24 @@ $(document).ready(function() {
                         response.data.forEach(function(item) {
                             console.log('Item:', item); // Debug each item
                             
-                            // Try to get all possible location fields
-                            const subdistrict = item.subdistrict || item.sub_district || item.subDistrict || '';
-                            const district = item.district || '';
-                            const city = item.city || item.city_name || '';
-                            const province = item.province || item.province_name || '';
-                            const zipCode = item.zip_code || item.postal_code || item.zipCode || '-';
+                            // API returns these fields
+                            const subdistrict = item.subdistrict_name || '';
+                            const district = item.district_name || '';
+                            const city = item.city_name || '';
+                            const province = item.province_name || '';
+                            const zipCode = item.zip_code || '-';
+                            const label = item.label || ''; // Pre-formatted by API
                             
-                            // Build hierarchical display: Subdistrict, District, City, Province
-                            // Only include non-empty parts
-                            const locationParts = [subdistrict, district, city, province].filter(Boolean);
-                            const displayText = locationParts.join(', ');
-                            
-                            // Create a more detailed label showing hierarchy
-                            let detailText = '';
-                            if (subdistrict) detailText = `<strong>${subdistrict}</strong>`;
-                            if (district && subdistrict) detailText += `, ${district}`;
-                            else if (district) detailText = `<strong>${district}</strong>`;
-                            if (city) detailText += detailText ? `, ${city}` : `<strong>${city}</strong>`;
-                            if (province) detailText += `, ${province}`;
+                            // Use the pre-formatted label from API or build our own
+                            const displayText = label || [subdistrict, district, city, province].filter(Boolean).join(', ');
                             
                             html += `
                                 <a href="#" class="list-group-item list-group-item-action destination-item" 
                                    data-id="${item.id}" 
                                    data-label="${displayText}">
-                                    ${detailText}
-                                    <br><small class="text-muted">Kode Pos: ${zipCode}</small>
+                                    <div><strong>${subdistrict}</strong>, ${district}</div>
+                                    <div>${city}, ${province}</div>
+                                    <small class="text-muted">Kode Pos: ${zipCode}</small>
                                 </a>
                             `;
                         });
